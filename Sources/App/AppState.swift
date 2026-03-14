@@ -114,6 +114,13 @@ final class AppState {
 
     func loadSelectedModel() async {
         guard let modelDef = settingsManager.selectedModel else {
+            // If the selected model ID doesn't exist (e.g. removed model), reset to default
+            if self.settingsManager.selectedModelId != AppConstants.Defaults.modelId {
+                Logger.app.warning("Selected model not found, resetting to default")
+                self.settingsManager.selectedModelId = AppConstants.Defaults.modelId
+                await loadSelectedModel()
+                return
+            }
             Logger.app.warning("No model selected")
             statusMessage = "No model selected"
             return
@@ -198,14 +205,21 @@ final class AppState {
         let samples = audioManager.stopCapture()
         Logger.app.info("Recording stopped, \(samples.count) samples captured")
 
-        // Fast streaming already inserted text live — just finalize
-        if settingsManager.fastStreamingMode && fastStreamInsertedCharCount > 0 {
-            lastTranscription = streamingTranscription
+        // Fast streaming already inserted text live — always finalize here,
+        // never fall through to full transcription (two whisper contexts
+        // running concurrently can crash)
+        if settingsManager.fastStreamingMode {
+            if fastStreamInsertedCharCount > 0 {
+                lastTranscription = streamingTranscription
+                floatingIndicator.showSuccess()
+                statusMessage = "Ready"
+            } else {
+                floatingIndicator.showError("No transcription")
+                statusMessage = "No transcription generated"
+            }
             streamingTranscription = ""
-            statusMessage = "Ready"
-            floatingIndicator.showSuccess()
-            recordingState = .idle
             fastStreamInsertedCharCount = 0
+            recordingState = .idle
             Logger.app.info("Fast streaming finalized")
             return
         }
@@ -347,7 +361,7 @@ final class AppState {
         }
 
         // When streaming produces a new text segment, append it at cursor
-        streamingWhisper.onNewText = { [weak self] text in
+        streamingWhisper.onNewText = { [weak self] (text: String) in
             guard let self, case .recording = self.recordingState else { return }
 
             // Append this segment's text
@@ -369,8 +383,9 @@ final class AppState {
     }
 
     private func stopFastStreaming() {
-        streamingWhisper.stop()
+        // Clear callbacks FIRST to prevent any more deliveries
         audioManager.onAudioSamples = nil
         streamingWhisper.onNewText = nil
+        streamingWhisper.stop()
     }
 }

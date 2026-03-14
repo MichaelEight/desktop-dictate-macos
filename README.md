@@ -23,4 +23,4 @@ Downloaded on-demand from the app. Stored in `~/Library/Application Support/Whis
 | Base | 142 MB | Fast | Good |
 | Small | 466 MB | Medium | Better |
 | Medium | 1.5 GB | Slow | Great |
-| Large V3 Turbo Q5 | 547 MB | Medium | Best (quantized) |
+| Large V2 | 3.1 GB | Slowest | Best |

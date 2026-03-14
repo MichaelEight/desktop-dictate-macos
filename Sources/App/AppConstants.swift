@@ -39,11 +39,11 @@ enum AppConstants {
             sizeDescription: "~1.5 GB"
         ),
         ModelDefinition(
-            id: "large-v3-turbo-q5",
-            name: "Large V3 Turbo Q5 (547 MB)",
-            filename: "ggml-large-v3-turbo-q5_0.bin",
-            url: URL(string: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin")!,
-            sizeDescription: "~547 MB"
+            id: "large-v2",
+            name: "Large V2 (3.1 GB)",
+            filename: "ggml-large-v2.bin",
+            url: URL(string: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v2.bin")!,
+            sizeDescription: "~3.1 GB"
         ),
     ]
 

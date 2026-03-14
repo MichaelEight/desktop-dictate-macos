@@ -8,6 +8,7 @@ import os
 final class StreamingWhisperManager {
     private var context: OpaquePointer?
     private var isRunning = false
+    private var loopExited = false
     private var processingQueue = DispatchQueue(label: "streaming-whisper", qos: .userInitiated)
 
     // Sliding window parameters
@@ -33,7 +34,7 @@ final class StreamingWhisperManager {
     ]
 
     /// Minimum RMS energy threshold — below this the audio is considered silence.
-    private let silenceThreshold: Float = 0.01
+    private let silenceThreshold: Float = 0.003
 
     func loadModel(at url: URL, language: String = "en") {
         self.language = language
@@ -56,15 +57,19 @@ final class StreamingWhisperManager {
         audioLock.unlock()
 
         isRunning = true
+        loopExited = false
         processingQueue.async { [weak self] in
             self?.streamingLoop()
+            self?.loopExited = true
         }
         Logger.transcription.info("StreamingWhisperManager: started")
     }
 
+    /// Stop streaming. Sets the flag so the loop exits after current iteration.
+    /// Does NOT block the main thread (avoids deadlock with onNewText callback).
     func stop() {
         isRunning = false
-        Logger.transcription.info("StreamingWhisperManager: stopped")
+        Logger.transcription.info("StreamingWhisperManager: stop requested")
     }
 
     /// Feed new audio samples from the microphone capture.
@@ -129,7 +134,8 @@ final class StreamingWhisperManager {
         params.print_realtime = false
         params.print_timestamps = false
         params.translate = false
-        params.n_threads = Int32(min(ProcessInfo.processInfo.activeProcessorCount, 8))
+        // Use fewer threads than available to avoid starving the audio subsystem
+        params.n_threads = Int32(max(min(ProcessInfo.processInfo.activeProcessorCount / 2, 4), 2))
         params.suppress_blank = true
 
         // Set language
