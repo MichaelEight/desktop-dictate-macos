@@ -64,5 +64,6 @@ enum AppConstants {
         static let soundFeedback = "soundFeedback"
         static let customVocabulary = "customVocabulary"
         static let keepInClipboard = "keepInClipboard"
+        static let maxRecordingDuration = "maxRecordingDuration"
     }
 }

@@ -100,6 +100,41 @@ private struct GeneralTab: View {
 
             Divider()
 
+            // Active model
+            LabeledContent("Active model") {
+                HStack(spacing: 8) {
+                    let localModels = appState.modelManager.availableLocalModels()
+                    if localModels.isEmpty {
+                        Text("No models downloaded")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Picker("", selection: Binding(
+                            get: { appState.settingsManager.selectedModelId },
+                            set: { newValue in
+                                appState.settingsManager.selectedModelId = newValue
+                                isLoadingModel = true
+                                Task {
+                                    await appState.loadSelectedModel()
+                                    isLoadingModel = false
+                                }
+                            }
+                        )) {
+                            ForEach(localModels) { model in
+                                Text(model.name).tag(model.id)
+                            }
+                        }
+                        .frame(width: 200)
+                    }
+
+                    if isLoadingModel {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                }
+            }
+
+            Divider()
+
             // Toggles
             Toggle("Launch at login", isOn: Binding(
                 get: { appState.launchAtLoginManager.isEnabled },
@@ -116,9 +151,55 @@ private struct GeneralTab: View {
                 set: { appState.settingsManager.keepInClipboard = $0 }
             ))
 
+            Divider()
+
+            // Max recording duration
+            LabeledContent {
+                HStack(spacing: 8) {
+                    Slider(
+                        value: Binding(
+                            get: { appState.settingsManager.maxRecordingDuration },
+                            set: { appState.settingsManager.maxRecordingDuration = $0 }
+                        ),
+                        in: 0...300,
+                        step: 10
+                    )
+                    .frame(width: 150)
+
+                    Text(appState.settingsManager.maxRecordingDuration == 0
+                         ? "Unlimited"
+                         : formatDuration(appState.settingsManager.maxRecordingDuration))
+                        .font(.system(.body, design: .monospaced))
+                        .frame(width: 70, alignment: .trailing)
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text("Max recording")
+                    Image(systemName: "questionmark.circle")
+                        .foregroundStyle(.secondary)
+                        .help("Auto-stops recording after this time. Set to Unlimited for no limit.")
+                }
+            }
+
             Spacer()
+
+            // About
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Whisper Dictation v1.0.0")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("Models: ~/Library/Application Support/WhisperDictation/Models/")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
         }
         .padding(20)
+    }
+
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let m = Int(seconds) / 60
+        let s = Int(seconds) % 60
+        return String(format: "%d:%02d", m, s)
     }
 }
 

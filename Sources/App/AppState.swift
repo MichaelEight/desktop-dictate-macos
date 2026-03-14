@@ -159,9 +159,11 @@ final class AppState {
         }
         audioManager.startCapture()
 
-        maxRecordingTimer = Timer.scheduledTimer(withTimeInterval: AppConstants.Defaults.maxRecordingDuration, repeats: false) { [weak self] _ in
-            Logger.app.warning("Max recording duration reached")
-            self?.stopRecordingAndTranscribe()
+        if settingsManager.maxRecordingDuration > 0 {
+            maxRecordingTimer = Timer.scheduledTimer(withTimeInterval: settingsManager.maxRecordingDuration, repeats: false) { [weak self] _ in
+                Logger.app.warning("Max recording duration reached")
+                self?.stopRecordingAndTranscribe()
+            }
         }
 
         Logger.app.info("Recording started")

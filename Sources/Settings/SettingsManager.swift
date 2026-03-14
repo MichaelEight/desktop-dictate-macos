@@ -22,6 +22,9 @@ final class SettingsManager {
     var keepInClipboard: Bool {
         didSet { defaults.set(keepInClipboard, forKey: AppConstants.UserDefaultsKeys.keepInClipboard) }
     }
+    var maxRecordingDuration: TimeInterval {
+        didSet { defaults.set(maxRecordingDuration, forKey: AppConstants.UserDefaultsKeys.maxRecordingDuration) }
+    }
 
     var selectedModel: ModelDefinition? {
         AppConstants.availableModels.first { $0.id == selectedModelId }
@@ -35,5 +38,7 @@ final class SettingsManager {
         self.soundFeedback = hasSoundKey ? UserDefaults.standard.bool(forKey: AppConstants.UserDefaultsKeys.soundFeedback) : true
         self.customVocabulary = UserDefaults.standard.string(forKey: AppConstants.UserDefaultsKeys.customVocabulary) ?? ""
         self.keepInClipboard = UserDefaults.standard.bool(forKey: AppConstants.UserDefaultsKeys.keepInClipboard)
+        let hasDurationKey = UserDefaults.standard.object(forKey: AppConstants.UserDefaultsKeys.maxRecordingDuration) != nil
+        self.maxRecordingDuration = hasDurationKey ? UserDefaults.standard.double(forKey: AppConstants.UserDefaultsKeys.maxRecordingDuration) : AppConstants.Defaults.maxRecordingDuration
     }
 }
