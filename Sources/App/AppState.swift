@@ -288,7 +288,14 @@ final class AppState {
         }
     }
 
-    // MARK: - Streaming Transcription
+    // MARK: - Chunked Streaming Transcription (BROKEN — DO NOT USE)
+    // BUG: This mode uses backspace key simulation to delete previously inserted text
+    // before replacing it with updated transcription. However, the backspace count is
+    // tracked by character count which does not account for text the user typed or
+    // that was already present. This causes it to DELETE EXISTING TEXT outside of the
+    // transcription, corrupting the user's document. Kept in code for reference but
+    // hidden from all UI surfaces. The fast streaming (C API) mode works correctly
+    // because it only appends new segments without deleting anything.
 
     private func startStreamingTranscription() {
         streamingTranscription = ""

@@ -6,13 +6,10 @@ struct MenuBarView: View {
     private var streamingSelection: Binding<Int> {
         Binding(
             get: {
-                if appState.settingsManager.fastStreamingMode { return 2 }
-                if appState.settingsManager.streamingMode { return 1 }
-                return 0
+                appState.settingsManager.fastStreamingMode ? 1 : 0
             },
             set: { value in
-                appState.settingsManager.streamingMode = (value == 1)
-                appState.settingsManager.fastStreamingMode = (value == 2)
+                appState.settingsManager.fastStreamingMode = (value == 1)
             }
         )
     }
@@ -73,7 +70,7 @@ struct MenuBarView: View {
                     .foregroundStyle(.secondary)
                 HoverSegmentedPicker(
                     selection: streamingSelection,
-                    options: ["No", "Normal", "Fast (EXP)"]
+                    options: ["Off", "On"]
                 )
             }
 
