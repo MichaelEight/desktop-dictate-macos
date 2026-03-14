@@ -5,6 +5,9 @@ final class AudioEngineManager {
     private var engine: AVAudioEngine?
     private let bufferManager = AudioBufferManager()
 
+    /// Optional callback for real-time audio feed (used by fast streaming mode).
+    var onAudioSamples: (([Float]) -> Void)?
+
     func startCapture() {
         let engine = AVAudioEngine()
         self.engine = engine
@@ -25,7 +28,7 @@ final class AudioEngineManager {
 
         bufferManager.clear()
 
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: nativeFormat) { [bufferManager] pcmBuffer, _ in
+        inputNode.installTap(onBus: 0, bufferSize: 4096, format: nativeFormat) { [bufferManager, weak self] pcmBuffer, _ in
             let frameCount = pcmBuffer.frameLength
             guard frameCount > 0 else { return }
 
@@ -55,6 +58,7 @@ final class AudioEngineManager {
                     count: Int(outputBuffer.frameLength)
                 ))
                 bufferManager.append(samples)
+                self?.onAudioSamples?(samples)
             }
         }
 

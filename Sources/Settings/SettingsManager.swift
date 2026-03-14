@@ -26,7 +26,16 @@ final class SettingsManager {
         didSet { defaults.set(maxRecordingDuration, forKey: AppConstants.UserDefaultsKeys.maxRecordingDuration) }
     }
     var streamingMode: Bool {
-        didSet { defaults.set(streamingMode, forKey: AppConstants.UserDefaultsKeys.streamingMode) }
+        didSet {
+            defaults.set(streamingMode, forKey: AppConstants.UserDefaultsKeys.streamingMode)
+            if streamingMode { fastStreamingMode = false }
+        }
+    }
+    var fastStreamingMode: Bool {
+        didSet {
+            defaults.set(fastStreamingMode, forKey: AppConstants.UserDefaultsKeys.fastStreamingMode)
+            if fastStreamingMode { streamingMode = false }
+        }
     }
 
     var selectedModel: ModelDefinition? {
@@ -44,5 +53,6 @@ final class SettingsManager {
         let hasDurationKey = UserDefaults.standard.object(forKey: AppConstants.UserDefaultsKeys.maxRecordingDuration) != nil
         self.maxRecordingDuration = hasDurationKey ? UserDefaults.standard.double(forKey: AppConstants.UserDefaultsKeys.maxRecordingDuration) : AppConstants.Defaults.maxRecordingDuration
         self.streamingMode = UserDefaults.standard.bool(forKey: AppConstants.UserDefaultsKeys.streamingMode)
+        self.fastStreamingMode = UserDefaults.standard.bool(forKey: AppConstants.UserDefaultsKeys.fastStreamingMode)
     }
 }

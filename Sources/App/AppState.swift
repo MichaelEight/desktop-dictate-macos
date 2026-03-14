@@ -30,12 +30,14 @@ final class AppState {
     let permissionManager = PermissionManager()
     let launchAtLoginManager = LaunchAtLoginManager()
     let floatingIndicator = FloatingRecordingWindow()
+    let streamingWhisper = StreamingWhisperManager()
 
     var streamingTranscription: String = ""
 
     private var maxRecordingTimer: Timer?
     private var streamingTimer: Timer?
     private var streamInsertedCharCount: Int = 0
+    private var fastStreamInsertedCharCount: Int = 0
     private var didSetup = false
 
     var menuBarIcon: String {
@@ -131,6 +133,8 @@ final class AppState {
             whisperManager.setPrompt(settingsManager.initialPrompt, vocabulary: settingsManager.customVocabulary)
             modelLoaded = true
             statusMessage = "Ready"
+            // Also load model for fast streaming (separate whisper context)
+            streamingWhisper.loadModel(at: fileURL, language: settingsManager.language)
             Logger.app.info("Model loaded: \(modelDef.name)")
         } catch {
             modelLoaded = false
@@ -164,7 +168,9 @@ final class AppState {
         audioManager.startCapture()
 
         // Start streaming transcription if enabled
-        if settingsManager.streamingMode {
+        if settingsManager.fastStreamingMode {
+            startFastStreaming()
+        } else if settingsManager.streamingMode {
             startStreamingTranscription()
         }
 
@@ -184,12 +190,25 @@ final class AppState {
         maxRecordingTimer?.invalidate()
         maxRecordingTimer = nil
         stopStreamingTranscription()
+        stopFastStreaming()
 
         if settingsManager.soundFeedback {
             NSSound(named: "Pop")?.play()
         }
         let samples = audioManager.stopCapture()
         Logger.app.info("Recording stopped, \(samples.count) samples captured")
+
+        // Fast streaming already inserted text live — just finalize
+        if settingsManager.fastStreamingMode && fastStreamInsertedCharCount > 0 {
+            lastTranscription = streamingTranscription
+            streamingTranscription = ""
+            statusMessage = "Ready"
+            floatingIndicator.showSuccess()
+            recordingState = .idle
+            fastStreamInsertedCharCount = 0
+            Logger.app.info("Fast streaming finalized")
+            return
+        }
 
         guard samples.count > 1600 else {
             Logger.app.info("Recording too short, ignoring")
@@ -314,5 +333,44 @@ final class AppState {
                 scheduleNextStreamingChunk()
             }
         }
+    }
+
+    // MARK: - Fast Streaming (C API)
+
+    private func startFastStreaming() {
+        streamingTranscription = ""
+        fastStreamInsertedCharCount = 0
+
+        // Wire audio samples directly to the streaming whisper manager
+        audioManager.onAudioSamples = { [weak self] samples in
+            self?.streamingWhisper.feedAudio(samples)
+        }
+
+        // When streaming produces a new text segment, append it at cursor
+        streamingWhisper.onNewText = { [weak self] text in
+            guard let self, case .recording = self.recordingState else { return }
+
+            // Append this segment's text
+            if !self.streamingTranscription.isEmpty {
+                self.streamingTranscription += " "
+            }
+            self.streamingTranscription += text
+            self.floatingIndicator.updateStreamingText(self.streamingTranscription)
+
+            // Insert the new segment at cursor (just append, no backspace needed)
+            let insertText = (self.fastStreamInsertedCharCount > 0 ? " " : "") + text
+            let result = self.textInsertionManager.insertText(insertText, keepInClipboard: true)
+            if result == .success {
+                self.fastStreamInsertedCharCount += insertText.count
+            }
+        }
+
+        streamingWhisper.start()
+    }
+
+    private func stopFastStreaming() {
+        streamingWhisper.stop()
+        audioManager.onAudioSamples = nil
+        streamingWhisper.onNewText = nil
     }
 }

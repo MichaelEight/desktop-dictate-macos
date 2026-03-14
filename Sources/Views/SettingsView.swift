@@ -156,7 +156,15 @@ private struct GeneralTab: View {
                     get: { appState.settingsManager.streamingMode },
                     set: { appState.settingsManager.streamingMode = $0 }
                 ))
-                QuickTooltip(text: "Shows live transcription while you speak. Text updates every few seconds during recording.")
+                QuickTooltip(text: "Shows live transcription while you speak. Re-transcribes all audio every few seconds. Accurate but slower.")
+            }
+
+            HStack(spacing: 4) {
+                Toggle("Streaming mode (experimental)", isOn: Binding(
+                    get: { appState.settingsManager.fastStreamingMode },
+                    set: { appState.settingsManager.fastStreamingMode = $0 }
+                ))
+                QuickTooltip(text: "Near-live transcription using a sliding audio window. Text appears ~1-2s after speaking. Uses more CPU.")
             }
 
             Divider()
