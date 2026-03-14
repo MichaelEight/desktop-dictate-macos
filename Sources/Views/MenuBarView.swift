@@ -151,8 +151,6 @@ struct MenuBarView: View {
                     .frame(width: 6, height: 6)
                 Text(appState.settingsManager.selectedModel?.id.capitalized ?? "None")
                     .font(.callout.weight(.medium))
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 9, weight: .bold))
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)

@@ -59,7 +59,7 @@ final class AppState {
     }
 
     /// Called once from AppDelegate.applicationDidFinishLaunching
-    func setup() async {
+    @MainActor func setup() async {
         guard !didSetup else { return }
         didSetup = true
 
