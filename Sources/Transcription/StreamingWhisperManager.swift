@@ -72,19 +72,30 @@ final class StreamingWhisperManager {
         Logger.transcription.info("StreamingWhisperManager: stop requested")
     }
 
-    /// Flush any remaining audio in the buffer through one final transcription.
-    /// Call AFTER stop() and after the loop has exited. Returns the final text or nil.
-    func flushRemaining() -> String? {
-        audioLock.lock()
-        let remaining = audioBuffer
-        audioBuffer.removeAll()
-        audioLock.unlock()
+    /// Flush any remaining audio after stop(). Runs on the processing queue
+    /// to guarantee the streaming loop has finished before touching the whisper context.
+    /// Calls completion on main thread with the final text (or nil).
+    func flushRemaining(completion: @escaping (String?) -> Void) {
+        processingQueue.async { [weak self] in
+            guard let self else {
+                DispatchQueue.main.async { completion(nil) }
+                return
+            }
 
-        guard remaining.count > 1600 else { return nil } // too short
-        guard rmsEnergy(remaining) >= silenceThreshold else { return nil } // silence
+            self.audioLock.lock()
+            let remaining = self.audioBuffer
+            self.audioBuffer.removeAll()
+            self.audioLock.unlock()
 
-        Logger.transcription.info("StreamingWhisperManager: flushing \(remaining.count) remaining samples")
-        return transcribeWindow(remaining)
+            guard remaining.count > 1600, self.rmsEnergy(remaining) >= self.silenceThreshold else {
+                DispatchQueue.main.async { completion(nil) }
+                return
+            }
+
+            Logger.transcription.info("StreamingWhisperManager: flushing \(remaining.count) remaining samples")
+            let text = self.transcribeWindow(remaining)
+            DispatchQueue.main.async { completion(text) }
+        }
     }
 
     /// Feed new audio samples from the microphone capture.

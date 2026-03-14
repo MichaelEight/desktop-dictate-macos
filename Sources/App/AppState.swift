@@ -422,28 +422,28 @@ final class AppState {
         // Stop feeding new audio and stop the streaming loop
         audioManager.onAudioSamples = nil
         streamingWhisper.stop()
+        streamingWhisper.onNewText = nil
 
-        // Flush remaining audio that hadn't reached the 3s threshold yet
-        if let finalText = streamingWhisper.flushRemaining() {
+        // Flush remaining audio on the processing queue (serialized after loop exit)
+        streamingWhisper.flushRemaining { [weak self] finalText in
+            guard let self, let finalText else { return }
             var processed = finalText
-            if settingsManager.textCommandsEnabled {
+            if self.settingsManager.textCommandsEnabled {
                 processed = TextPostProcessor.applyTextCommands(processed)
             }
             if !processed.isEmpty {
-                if !streamingTranscription.isEmpty {
-                    streamingTranscription += " "
+                if !self.streamingTranscription.isEmpty {
+                    self.streamingTranscription += " "
                 }
-                streamingTranscription += processed
+                self.streamingTranscription += processed
 
-                let insertText = (fastStreamInsertedCharCount > 0 ? " " : "") + processed
-                let result = textInsertionManager.insertText(insertText, keepInClipboard: true)
+                let insertText = (self.fastStreamInsertedCharCount > 0 ? " " : "") + processed
+                let result = self.textInsertionManager.insertText(insertText, keepInClipboard: true)
                 if result == .success {
-                    fastStreamInsertedCharCount += insertText.count
+                    self.fastStreamInsertedCharCount += insertText.count
                 }
                 Logger.app.info("Fast streaming: flushed final segment: \(processed.prefix(60))")
             }
         }
-
-        streamingWhisper.onNewText = nil
     }
 }
