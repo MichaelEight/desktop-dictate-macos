@@ -6,13 +6,16 @@ import SwiftUI
 final class FloatingRecordingWindow {
     private var panel: NSPanel?
 
+    /// Optional closure that returns the current mic RMS level (0.0–~0.5).
+    var audioLevelProvider: (() -> Float)?
+
     func show(state: RecordingState) {
         hide()
 
         let view: AnyView
         switch state {
         case .recording:
-            view = AnyView(RecordingPillView(startTime: Date()))
+            view = AnyView(RecordingPillView(startTime: Date(), audioLevelProvider: audioLevelProvider))
         case .transcribing:
             view = AnyView(TranscribingPillView())
         default:
@@ -82,8 +85,10 @@ final class FloatingRecordingWindow {
 
 private struct RecordingPillView: View {
     let startTime: Date
+    let audioLevelProvider: (() -> Float)?
     @State private var isPulsing = false
     @State private var elapsed: TimeInterval = 0
+    @State private var audioLevel: Float = 0
 
     var body: some View {
         HStack(spacing: 10) {
@@ -97,6 +102,8 @@ private struct RecordingPillView: View {
             Text(formatTime(elapsed))
                 .font(.system(.title3, design: .monospaced).weight(.medium))
                 .foregroundStyle(.primary)
+
+            AudioLevelBars(level: audioLevel)
         }
         .fixedSize()
         .padding(.horizontal, 18)
@@ -104,8 +111,9 @@ private struct RecordingPillView: View {
         .background(.ultraThinMaterial, in: Capsule())
         .onAppear {
             isPulsing = true
-            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+            Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
                 elapsed = Date().timeIntervalSince(startTime)
+                audioLevel = audioLevelProvider?() ?? 0
             }
         }
     }
@@ -114,6 +122,37 @@ private struct RecordingPillView: View {
         let minutes = Int(interval) / 60
         let seconds = Int(interval) % 60
         return String(format: "%d:%02d", minutes, seconds)
+    }
+}
+
+/// Mini audio level indicator — 5 vertical bars that respond to mic input.
+private struct AudioLevelBars: View {
+    let level: Float
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<5, id: \.self) { i in
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(barColor)
+                    .frame(width: 3, height: barHeight(for: i))
+            }
+        }
+        .frame(height: 16)
+        .animation(.easeOut(duration: 0.08), value: level)
+    }
+
+    private var barColor: Color {
+        let norm = min(Double(level) * 40, 1.0)
+        if norm > 0.5 { return .green }
+        if norm > 0.1 { return .green.opacity(0.7) }
+        return .primary.opacity(0.2)
+    }
+
+    private func barHeight(for index: Int) -> CGFloat {
+        let norm = min(CGFloat(level) * 40, 1.0)
+        // Middle bar tallest, edges shorter
+        let weights: [CGFloat] = [0.5, 0.8, 1.0, 0.75, 0.55]
+        return max(3, 16 * norm * weights[index])
     }
 }
 

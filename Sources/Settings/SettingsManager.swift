@@ -37,6 +37,28 @@ final class SettingsManager {
             if fastStreamingMode { streamingMode = false }
         }
     }
+    var textCommandsEnabled: Bool {
+        didSet { defaults.set(textCommandsEnabled, forKey: AppConstants.UserDefaultsKeys.textCommandsEnabled) }
+    }
+    var llmPostProcessingEnabled: Bool {
+        didSet { defaults.set(llmPostProcessingEnabled, forKey: AppConstants.UserDefaultsKeys.llmPostProcessingEnabled) }
+    }
+    var llmApiEndpoint: String {
+        didSet { defaults.set(llmApiEndpoint, forKey: AppConstants.UserDefaultsKeys.llmApiEndpoint) }
+    }
+    var llmApiKey: String {
+        didSet { defaults.set(llmApiKey, forKey: AppConstants.UserDefaultsKeys.llmApiKey) }
+    }
+    var llmModel: String {
+        didSet { defaults.set(llmModel, forKey: AppConstants.UserDefaultsKeys.llmModel) }
+    }
+    var llmSystemPrompt: String {
+        didSet { defaults.set(llmSystemPrompt, forKey: AppConstants.UserDefaultsKeys.llmSystemPrompt) }
+    }
+
+    var isLargeModelSelected: Bool {
+        AppConstants.largeModelIds.contains(selectedModelId)
+    }
 
     var selectedModel: ModelDefinition? {
         AppConstants.availableModels.first { $0.id == selectedModelId }
@@ -54,5 +76,11 @@ final class SettingsManager {
         self.maxRecordingDuration = hasDurationKey ? UserDefaults.standard.double(forKey: AppConstants.UserDefaultsKeys.maxRecordingDuration) : AppConstants.Defaults.maxRecordingDuration
         self.streamingMode = UserDefaults.standard.bool(forKey: AppConstants.UserDefaultsKeys.streamingMode)
         self.fastStreamingMode = UserDefaults.standard.bool(forKey: AppConstants.UserDefaultsKeys.fastStreamingMode)
+        self.textCommandsEnabled = UserDefaults.standard.bool(forKey: AppConstants.UserDefaultsKeys.textCommandsEnabled)
+        self.llmPostProcessingEnabled = UserDefaults.standard.bool(forKey: AppConstants.UserDefaultsKeys.llmPostProcessingEnabled)
+        self.llmApiEndpoint = UserDefaults.standard.string(forKey: AppConstants.UserDefaultsKeys.llmApiEndpoint) ?? "https://api.openai.com/v1/chat/completions"
+        self.llmApiKey = UserDefaults.standard.string(forKey: AppConstants.UserDefaultsKeys.llmApiKey) ?? ""
+        self.llmModel = UserDefaults.standard.string(forKey: AppConstants.UserDefaultsKeys.llmModel) ?? "gpt-4o-mini"
+        self.llmSystemPrompt = UserDefaults.standard.string(forKey: AppConstants.UserDefaultsKeys.llmSystemPrompt) ?? TextPostProcessor.defaultSystemPrompt
     }
 }

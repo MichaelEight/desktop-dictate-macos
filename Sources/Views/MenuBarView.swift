@@ -74,6 +74,16 @@ struct MenuBarView: View {
                 )
             }
 
+            if appState.settingsManager.fastStreamingMode && appState.settingsManager.isLargeModelSelected {
+                HStack(spacing: 5) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                    Text("Large model — streaming may lag")
+                        .font(.caption)
+                }
+                .foregroundStyle(.orange)
+            }
+
             Divider()
 
             // Footer

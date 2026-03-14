@@ -168,6 +168,7 @@ final class AppState {
 
         recordingState = .recording
         statusMessage = "Recording..."
+        floatingIndicator.audioLevelProvider = { [weak self] in self?.audioManager.currentLevel ?? 0 }
         floatingIndicator.show(state: .recording)
         if settingsManager.soundFeedback {
             NSSound(named: "Tink")?.play()
@@ -239,7 +240,28 @@ final class AppState {
         Task { @MainActor in
             do {
                 let text = try await whisperManager.transcribe(audioFrames: samples)
-                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                var trimmed = TextPostProcessor.filterJunkTokens(
+                    text.trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+
+                // Post-processing pipeline
+                if !trimmed.isEmpty && settingsManager.textCommandsEnabled {
+                    trimmed = TextPostProcessor.applyTextCommands(trimmed)
+                }
+                if !trimmed.isEmpty && settingsManager.llmPostProcessingEnabled && !settingsManager.llmApiKey.isEmpty {
+                    statusMessage = "Polishing..."
+                    do {
+                        trimmed = try await TextPostProcessor.llmProcess(
+                            text: trimmed,
+                            endpoint: settingsManager.llmApiEndpoint,
+                            apiKey: settingsManager.llmApiKey,
+                            model: settingsManager.llmModel,
+                            systemPrompt: settingsManager.llmSystemPrompt
+                        )
+                    } catch {
+                        Logger.app.error("LLM post-processing failed: \(error.localizedDescription)")
+                    }
+                }
 
                 if trimmed.isEmpty {
                     Logger.app.info("Transcription returned empty text")
@@ -371,15 +393,22 @@ final class AppState {
         streamingWhisper.onNewText = { [weak self] (text: String) in
             guard let self, case .recording = self.recordingState else { return }
 
+            // Apply text commands if enabled
+            var processed = text
+            if self.settingsManager.textCommandsEnabled {
+                processed = TextPostProcessor.applyTextCommands(processed)
+            }
+            guard !processed.isEmpty else { return }
+
             // Append this segment's text
             if !self.streamingTranscription.isEmpty {
                 self.streamingTranscription += " "
             }
-            self.streamingTranscription += text
+            self.streamingTranscription += processed
             self.floatingIndicator.updateStreamingText(self.streamingTranscription)
 
             // Insert the new segment at cursor (just append, no backspace needed)
-            let insertText = (self.fastStreamInsertedCharCount > 0 ? " " : "") + text
+            let insertText = (self.fastStreamInsertedCharCount > 0 ? " " : "") + processed
             let result = self.textInsertionManager.insertText(insertText, keepInClipboard: true)
             if result == .success {
                 self.fastStreamInsertedCharCount += insertText.count
@@ -390,9 +419,31 @@ final class AppState {
     }
 
     private func stopFastStreaming() {
-        // Clear callbacks FIRST to prevent any more deliveries
+        // Stop feeding new audio and stop the streaming loop
         audioManager.onAudioSamples = nil
-        streamingWhisper.onNewText = nil
         streamingWhisper.stop()
+
+        // Flush remaining audio that hadn't reached the 3s threshold yet
+        if let finalText = streamingWhisper.flushRemaining() {
+            var processed = finalText
+            if settingsManager.textCommandsEnabled {
+                processed = TextPostProcessor.applyTextCommands(processed)
+            }
+            if !processed.isEmpty {
+                if !streamingTranscription.isEmpty {
+                    streamingTranscription += " "
+                }
+                streamingTranscription += processed
+
+                let insertText = (fastStreamInsertedCharCount > 0 ? " " : "") + processed
+                let result = textInsertionManager.insertText(insertText, keepInClipboard: true)
+                if result == .success {
+                    fastStreamInsertedCharCount += insertText.count
+                }
+                Logger.app.info("Fast streaming: flushed final segment: \(processed.prefix(60))")
+            }
+        }
+
+        streamingWhisper.onNewText = nil
     }
 }

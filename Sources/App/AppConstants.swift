@@ -67,5 +67,14 @@ enum AppConstants {
         static let maxRecordingDuration = "maxRecordingDuration"
         static let streamingMode = "streamingMode"
         static let fastStreamingMode = "fastStreamingMode"
+        static let textCommandsEnabled = "textCommandsEnabled"
+        static let llmPostProcessingEnabled = "llmPostProcessingEnabled"
+        static let llmApiEndpoint = "llmApiEndpoint"
+        static let llmApiKey = "llmApiKey"
+        static let llmModel = "llmModel"
+        static let llmSystemPrompt = "llmSystemPrompt"
     }
+
+    /// Models considered "large" — may be too slow for streaming on weaker machines.
+    static let largeModelIds: Set<String> = ["medium", "large-v2"]
 }

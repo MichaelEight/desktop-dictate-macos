@@ -5,6 +5,9 @@ final class AudioEngineManager {
     private var engine: AVAudioEngine?
     private let bufferManager = AudioBufferManager()
 
+    /// Current RMS audio level (0.0–1.0 range, updated from audio tap).
+    private(set) var currentLevel: Float = 0
+
     /// Optional callback for real-time audio feed (used by fast streaming mode).
     var onAudioSamples: (([Float]) -> Void)?
 
@@ -58,6 +61,11 @@ final class AudioEngineManager {
                     count: Int(outputBuffer.frameLength)
                 ))
                 bufferManager.append(samples)
+                // Update RMS level for audio indicator
+                let rms = Self.rmsLevel(samples)
+                DispatchQueue.main.async { [weak self] in
+                    self?.currentLevel = rms
+                }
                 self?.onAudioSamples?(samples)
             }
         }
@@ -75,6 +83,12 @@ final class AudioEngineManager {
     /// Snapshot current audio without stopping capture (for streaming mode).
     func snapshotAudio() -> [Float] {
         return bufferManager.snapshotAll()
+    }
+
+    private static func rmsLevel(_ samples: [Float]) -> Float {
+        guard !samples.isEmpty else { return 0 }
+        let sum = samples.reduce(Float(0)) { $0 + $1 * $1 }
+        return sqrt(sum / Float(samples.count))
     }
 
     func stopCapture() -> [Float] {

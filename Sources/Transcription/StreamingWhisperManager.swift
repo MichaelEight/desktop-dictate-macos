@@ -72,6 +72,21 @@ final class StreamingWhisperManager {
         Logger.transcription.info("StreamingWhisperManager: stop requested")
     }
 
+    /// Flush any remaining audio in the buffer through one final transcription.
+    /// Call AFTER stop() and after the loop has exited. Returns the final text or nil.
+    func flushRemaining() -> String? {
+        audioLock.lock()
+        let remaining = audioBuffer
+        audioBuffer.removeAll()
+        audioLock.unlock()
+
+        guard remaining.count > 1600 else { return nil } // too short
+        guard rmsEnergy(remaining) >= silenceThreshold else { return nil } // silence
+
+        Logger.transcription.info("StreamingWhisperManager: flushing \(remaining.count) remaining samples")
+        return transcribeWindow(remaining)
+    }
+
     /// Feed new audio samples from the microphone capture.
     func feedAudio(_ samples: [Float]) {
         audioLock.lock()

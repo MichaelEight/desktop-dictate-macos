@@ -141,6 +141,15 @@ private struct GeneralTab: View {
             .toggleStyle(HoverToggleStyle())
 
             HStack(spacing: 4) {
+                Toggle("Text commands", isOn: Binding(
+                    get: { appState.settingsManager.textCommandsEnabled },
+                    set: { appState.settingsManager.textCommandsEnabled = $0 }
+                ))
+                QuickTooltip(text: "Converts spoken commands like \"new line\", \"open bracket\", \"period\", \"comma\" into symbols.")
+            }
+            .toggleStyle(HoverToggleStyle())
+
+            HStack(spacing: 4) {
                 Toggle("Streaming mode", isOn: Binding(
                     get: { appState.settingsManager.fastStreamingMode },
                     set: { appState.settingsManager.fastStreamingMode = $0 }
@@ -148,6 +157,18 @@ private struct GeneralTab: View {
                 QuickTooltip(text: "Live transcription while you speak. Text appears ~2-3s after speaking.")
             }
             .toggleStyle(HoverToggleStyle())
+
+            if appState.settingsManager.fastStreamingMode && appState.settingsManager.isLargeModelSelected {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                        .font(.caption)
+                    Text("Large models may be too slow for streaming. Consider a smaller model for better performance.")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+                .padding(.leading, 8)
+            }
 
             Divider()
 
@@ -206,9 +227,14 @@ private struct AdvancedTab: View {
     let appState: AppState
     @State private var promptText: String = ""
     @State private var vocabularyText: String = ""
+    @State private var llmEndpoint: String = ""
+    @State private var llmApiKey: String = ""
+    @State private var llmModel: String = ""
+    @State private var llmSystemPrompt: String = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Custom Vocabulary")
                     .font(.headline)
 
@@ -232,6 +258,53 @@ private struct AdvancedTab: View {
                 Text("Guide the model's style — punctuation, formatting, or domain-specific terms.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                Divider()
+
+                // LLM Post-Processing
+                HStack(spacing: 4) {
+                    Text("LLM Post-Processing")
+                        .font(.headline)
+                    QuickTooltip(text: "Send transcriptions to an LLM API to fix punctuation, capitalization, and errors before inserting.")
+                }
+
+                Toggle("Enable LLM cleanup", isOn: Binding(
+                    get: { appState.settingsManager.llmPostProcessingEnabled },
+                    set: { appState.settingsManager.llmPostProcessingEnabled = $0 }
+                ))
+                .toggleStyle(HoverToggleStyle())
+
+                if appState.settingsManager.llmPostProcessingEnabled {
+                    LabeledContent("Endpoint") {
+                        TextField("https://api.openai.com/v1/chat/completions", text: $llmEndpoint)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 260)
+                    }
+
+                    LabeledContent("API Key") {
+                        SecureField("sk-...", text: $llmApiKey)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 260)
+                    }
+
+                    LabeledContent("Model") {
+                        TextField("gpt-4o-mini", text: $llmModel)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 260)
+                    }
+
+                    Text("System Prompt")
+                        .font(.subheadline)
+
+                    TextEditor(text: $llmSystemPrompt)
+                        .font(.system(.caption, design: .monospaced))
+                        .frame(height: 60)
+                        .border(.quaternary)
+
+                    Text("Works with any OpenAI-compatible API (OpenAI, Ollama, LM Studio, etc.)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
                 Divider()
 
@@ -272,13 +345,16 @@ private struct AdvancedTab: View {
                 .controlSize(.small)
                 .buttonStyle(.bordered)
                 .foregroundStyle(.secondary)
-
-            Spacer()
+            }
+            .padding(20)
         }
-        .padding(20)
         .onAppear {
             promptText = appState.settingsManager.initialPrompt
             vocabularyText = appState.settingsManager.customVocabulary
+            llmEndpoint = appState.settingsManager.llmApiEndpoint
+            llmApiKey = appState.settingsManager.llmApiKey
+            llmModel = appState.settingsManager.llmModel
+            llmSystemPrompt = appState.settingsManager.llmSystemPrompt
         }
         .onChange(of: promptText) { _, newValue in
             appState.settingsManager.initialPrompt = newValue
@@ -287,6 +363,18 @@ private struct AdvancedTab: View {
         .onChange(of: vocabularyText) { _, newValue in
             appState.settingsManager.customVocabulary = newValue
             appState.whisperManager.setPrompt(appState.settingsManager.initialPrompt, vocabulary: newValue)
+        }
+        .onChange(of: llmEndpoint) { _, newValue in
+            appState.settingsManager.llmApiEndpoint = newValue
+        }
+        .onChange(of: llmApiKey) { _, newValue in
+            appState.settingsManager.llmApiKey = newValue
+        }
+        .onChange(of: llmModel) { _, newValue in
+            appState.settingsManager.llmModel = newValue
+        }
+        .onChange(of: llmSystemPrompt) { _, newValue in
+            appState.settingsManager.llmSystemPrompt = newValue
         }
     }
 }
