@@ -43,6 +43,7 @@ struct SettingsView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
+            .contentShape(Rectangle())
             .background(selectedTab == tag ? Color.accentColor.opacity(0.15) : Color.clear)
             .cornerRadius(6)
         }
