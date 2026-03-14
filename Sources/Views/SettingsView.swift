@@ -151,6 +151,14 @@ private struct GeneralTab: View {
                 set: { appState.settingsManager.keepInClipboard = $0 }
             ))
 
+            HStack(spacing: 4) {
+                Toggle("Streaming mode", isOn: Binding(
+                    get: { appState.settingsManager.streamingMode },
+                    set: { appState.settingsManager.streamingMode = $0 }
+                ))
+                QuickTooltip(text: "Shows live transcription while you speak. Text updates every few seconds during recording.")
+            }
+
             Divider()
 
             // Max recording duration
@@ -170,14 +178,13 @@ private struct GeneralTab: View {
                          ? "Unlimited"
                          : formatDuration(appState.settingsManager.maxRecordingDuration))
                         .font(.system(.body, design: .monospaced))
-                        .frame(width: 70, alignment: .trailing)
+                        .lineLimit(1)
+                        .fixedSize()
                 }
             } label: {
                 HStack(spacing: 4) {
                     Text("Max recording")
-                    Image(systemName: "questionmark.circle")
-                        .foregroundStyle(.secondary)
-                        .help("Auto-stops recording after this time. Set to Unlimited for no limit.")
+                    QuickTooltip(text: "Auto-stops recording after this time. Set to Unlimited for no limit.")
                 }
             }
 

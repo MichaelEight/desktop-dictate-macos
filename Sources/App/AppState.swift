@@ -31,7 +31,11 @@ final class AppState {
     let launchAtLoginManager = LaunchAtLoginManager()
     let floatingIndicator = FloatingRecordingWindow()
 
+    var streamingTranscription: String = ""
+
     private var maxRecordingTimer: Timer?
+    private var streamingTimer: Timer?
+    private var streamInsertedCharCount: Int = 0
     private var didSetup = false
 
     var menuBarIcon: String {
@@ -159,6 +163,11 @@ final class AppState {
         }
         audioManager.startCapture()
 
+        // Start streaming transcription if enabled
+        if settingsManager.streamingMode {
+            startStreamingTranscription()
+        }
+
         if settingsManager.maxRecordingDuration > 0 {
             maxRecordingTimer = Timer.scheduledTimer(withTimeInterval: settingsManager.maxRecordingDuration, repeats: false) { [weak self] _ in
                 Logger.app.warning("Max recording duration reached")
@@ -174,6 +183,7 @@ final class AppState {
 
         maxRecordingTimer?.invalidate()
         maxRecordingTimer = nil
+        stopStreamingTranscription()
 
         if settingsManager.soundFeedback {
             NSSound(named: "Pop")?.play()
@@ -204,22 +214,34 @@ final class AppState {
                     floatingIndicator.hide()
                 } else {
                     lastTranscription = trimmed
-                    let result = textInsertionManager.insertText(trimmed, keepInClipboard: settingsManager.keepInClipboard)
+
+                    // In streaming mode, delete what streaming inserted, then insert final full text
+                    let result: InsertionResult
+                    if settingsManager.streamingMode && streamInsertedCharCount > 0 {
+                        result = textInsertionManager.replaceStreamingText(
+                            oldLength: streamInsertedCharCount,
+                            newText: trimmed
+                        )
+                        streamInsertedCharCount = 0
+                    } else {
+                        result = textInsertionManager.insertText(trimmed, keepInClipboard: settingsManager.keepInClipboard)
+                    }
+
                     switch result {
-                    case .success:
-                        statusMessage = "Ready"
-                        floatingIndicator.showSuccess()
-                        Logger.app.info("Transcription inserted: \(trimmed.prefix(80))")
-                    case .accessibilityDenied:
-                        statusMessage = "Accessibility permission required"
-                        floatingIndicator.showError("Accessibility denied")
-                        recordingState = .error("Accessibility permission required")
-                        Logger.app.error("Text insertion failed — accessibility denied")
-                    case .simulationFailed:
-                        statusMessage = "Text insertion failed"
-                        floatingIndicator.showError("Paste failed")
-                        recordingState = .error("Could not simulate paste")
-                        Logger.app.error("Text insertion failed — CGEvent creation failed")
+                        case .success:
+                            statusMessage = "Ready"
+                            floatingIndicator.showSuccess()
+                            Logger.app.info("Transcription inserted: \(trimmed.prefix(80))")
+                        case .accessibilityDenied:
+                            statusMessage = "Accessibility permission required"
+                            floatingIndicator.showError("Accessibility denied")
+                            recordingState = .error("Accessibility permission required")
+                            Logger.app.error("Text insertion failed — accessibility denied")
+                        case .simulationFailed:
+                            statusMessage = "Text insertion failed"
+                            floatingIndicator.showError("Paste failed")
+                            recordingState = .error("Could not simulate paste")
+                            Logger.app.error("Text insertion failed — CGEvent creation failed")
                     }
                 }
             } catch {
@@ -230,6 +252,67 @@ final class AppState {
                 try? await Task.sleep(for: .seconds(3))
             }
             recordingState = .idle
+        }
+    }
+
+    // MARK: - Streaming Transcription
+
+    private func startStreamingTranscription() {
+        streamingTranscription = ""
+        streamInsertedCharCount = 0
+        scheduleNextStreamingChunk()
+    }
+
+    private func stopStreamingTranscription() {
+        streamingTimer?.invalidate()
+        streamingTimer = nil
+    }
+
+    /// Schedule the next streaming chunk. We use one-shot timers instead of repeating
+    /// to avoid overlapping transcriptions — each chunk schedules the next only after completing.
+    private func scheduleNextStreamingChunk() {
+        streamingTimer?.invalidate()
+        streamingTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
+            self?.performStreamingTranscription()
+        }
+    }
+
+    private func performStreamingTranscription() {
+        guard case .recording = recordingState else { return }
+
+        let samples = audioManager.snapshotAudio()
+        guard samples.count > 16000 else {
+            scheduleNextStreamingChunk()
+            return
+        }
+
+        Logger.app.debug("Streaming: transcribing \(samples.count) samples")
+
+        Task { @MainActor in
+            do {
+                let text = try await whisperManager.transcribe(audioFrames: samples)
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty, case .recording = recordingState {
+                    streamingTranscription = trimmed
+                    floatingIndicator.updateStreamingText(trimmed)
+
+                    // Delete previously inserted streaming text, then insert full new text
+                    let result = textInsertionManager.replaceStreamingText(
+                        oldLength: streamInsertedCharCount,
+                        newText: trimmed
+                    )
+                    if result == .success {
+                        streamInsertedCharCount = trimmed.count
+                    }
+
+                    Logger.app.debug("Streaming result: \(trimmed.prefix(80))")
+                }
+            } catch {
+                Logger.app.error("Streaming transcription failed: \(error.localizedDescription)")
+            }
+            if case .recording = recordingState {
+                scheduleNextStreamingChunk()
+            }
         }
     }
 }

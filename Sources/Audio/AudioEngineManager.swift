@@ -68,6 +68,11 @@ final class AudioEngineManager {
         }
     }
 
+    /// Snapshot current audio without stopping capture (for streaming mode).
+    func snapshotAudio() -> [Float] {
+        return bufferManager.snapshotAll()
+    }
+
     func stopCapture() -> [Float] {
         guard let engine else {
             Logger.audio.warning("stopCapture called but no engine running")

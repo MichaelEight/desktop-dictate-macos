@@ -18,6 +18,14 @@ final class AudioBufferManager {
         return result
     }
 
+    /// Read all samples without consuming them (for streaming transcription).
+    func snapshotAll() -> [Float] {
+        lock.lock()
+        let result = buffer
+        lock.unlock()
+        return result
+    }
+
     func clear() {
         lock.lock()
         buffer.removeAll(keepingCapacity: true)

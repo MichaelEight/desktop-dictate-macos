@@ -25,6 +25,9 @@ final class SettingsManager {
     var maxRecordingDuration: TimeInterval {
         didSet { defaults.set(maxRecordingDuration, forKey: AppConstants.UserDefaultsKeys.maxRecordingDuration) }
     }
+    var streamingMode: Bool {
+        didSet { defaults.set(streamingMode, forKey: AppConstants.UserDefaultsKeys.streamingMode) }
+    }
 
     var selectedModel: ModelDefinition? {
         AppConstants.availableModels.first { $0.id == selectedModelId }
@@ -40,5 +43,6 @@ final class SettingsManager {
         self.keepInClipboard = UserDefaults.standard.bool(forKey: AppConstants.UserDefaultsKeys.keepInClipboard)
         let hasDurationKey = UserDefaults.standard.object(forKey: AppConstants.UserDefaultsKeys.maxRecordingDuration) != nil
         self.maxRecordingDuration = hasDurationKey ? UserDefaults.standard.double(forKey: AppConstants.UserDefaultsKeys.maxRecordingDuration) : AppConstants.Defaults.maxRecordingDuration
+        self.streamingMode = UserDefaults.standard.bool(forKey: AppConstants.UserDefaultsKeys.streamingMode)
     }
 }

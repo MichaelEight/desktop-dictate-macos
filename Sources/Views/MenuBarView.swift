@@ -21,6 +21,16 @@ struct MenuBarView: View {
 
             if case .recording = appState.recordingState {
                 RecordingIndicatorView()
+
+                // Show live streaming transcription
+                if appState.settingsManager.streamingMode && !appState.streamingTranscription.isEmpty {
+                    Text(appState.streamingTranscription)
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .italic()
+                }
             }
 
             // Last transcription with copy button
@@ -41,7 +51,6 @@ struct MenuBarView: View {
                             .font(.caption)
                     }
                     .buttonStyle(.borderless)
-                    .help("Copy to clipboard")
                 }
             }
 
@@ -54,7 +63,14 @@ struct MenuBarView: View {
             Divider()
 
             // Footer
-            HStack {
+            HStack(spacing: 12) {
+                Button("Settings") {
+                    WindowManager.shared.openSettings(appState: appState)
+                }
+                .buttonStyle(.borderless)
+
+                Spacer()
+
                 // Hotkey badge
                 Text(appState.hotKeyManager.currentHotkeyDescription)
                     .font(.system(.caption2, design: .rounded))
@@ -62,16 +78,9 @@ struct MenuBarView: View {
                     .padding(.vertical, 2)
                     .background(.quaternary)
                     .cornerRadius(4)
+                    .foregroundStyle(.secondary)
 
                 Spacer()
-
-                Button {
-                    WindowManager.shared.openSettings(appState: appState)
-                } label: {
-                    Image(systemName: "gear")
-                        .font(.body)
-                }
-                .buttonStyle(.borderless)
 
                 Button("Quit") {
                     NSApplication.shared.terminate(nil)
@@ -128,16 +137,29 @@ struct MenuBarView: View {
         .menuStyle(.borderlessButton)
     }
 
-    // MARK: - Permission Banner
+    // MARK: - Permission Banners
 
     private var permissionBanner: some View {
-        Button {
-            WindowManager.shared.openSettings(appState: appState)
-        } label: {
+        VStack(spacing: 6) {
+            if !appState.permissionManager.microphoneAuthorized {
+                permissionRow("Microphone access needed", icon: "mic.slash") {
+                    Task { await appState.permissionManager.requestMicrophoneAccess() }
+                }
+            }
+            if !appState.permissionManager.accessibilityAuthorized {
+                permissionRow("Accessibility access needed", icon: "lock.shield") {
+                    appState.permissionManager.requestAccessibilityAccess()
+                }
+            }
+        }
+    }
+
+    private func permissionRow(_ text: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             HStack(spacing: 8) {
-                Image(systemName: "exclamationmark.triangle.fill")
+                Image(systemName: icon)
                     .foregroundStyle(.orange)
-                Text("Permissions needed")
+                Text(text)
                     .font(.caption.weight(.medium))
                 Spacer()
                 Text("Fix")

@@ -65,5 +65,6 @@ enum AppConstants {
         static let customVocabulary = "customVocabulary"
         static let keepInClipboard = "keepInClipboard"
         static let maxRecordingDuration = "maxRecordingDuration"
+        static let streamingMode = "streamingMode"
     }
 }
