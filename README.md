@@ -13,11 +13,20 @@ A macOS menu bar app for voice dictation anywhere on your system. Hold a hotkey,
   </tr>
 </table>
 
-## Setup
+## Install
+
+### Option 1: Download release
+
+1. Download `WhisperDictation-v1.0.0.zip` from [Releases](https://github.com/MichaelEight/desktop-dictate-macos/releases/latest)
+2. Unzip and move `WhisperDictation.app` to Applications
+3. Right-click the app → **Open** (required on first launch — the app is ad-hoc signed, so Gatekeeper will block a normal double-click)
+4. Grant Microphone and Accessibility permissions when prompted
+
+### Option 2: Build from source
 
 ```bash
-git clone <repo-url>
-cd desktop-dictate
+git clone https://github.com/MichaelEight/desktop-dictate-macos.git
+cd desktop-dictate-macos
 ./build.sh
 open WhisperDictation.app
 ```
