@@ -28,7 +28,7 @@ struct SettingsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 480, height: 380)
+        .frame(width: 480, height: 560)
     }
 
     private func tabButton(_ title: String, icon: String, tag: Int) -> some View {
@@ -130,8 +130,7 @@ private struct AdvancedTab: View {
     @State private var vocabularyText: String = ""
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
                 Text("Custom Vocabulary")
                     .font(.headline)
 
@@ -195,9 +194,10 @@ private struct AdvancedTab: View {
                 .controlSize(.small)
                 .buttonStyle(.bordered)
                 .foregroundStyle(.secondary)
-            }
-            .padding(20)
+
+            Spacer()
         }
+        .padding(20)
         .onAppear {
             promptText = appState.settingsManager.initialPrompt
             vocabularyText = appState.settingsManager.customVocabulary
