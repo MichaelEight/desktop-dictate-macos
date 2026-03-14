@@ -1,0 +1,7 @@
+.build/
+.swiftpm/
+WhisperDictation.app/
+Package.resolved
+.DS_Store
+*.xcodeproj
+xcuserdata/
