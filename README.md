@@ -2,6 +2,17 @@
 
 A macOS menu bar app for voice dictation anywhere on your system. Hold a hotkey, speak, and release to insert text at your cursor. It runs fully offline on your device with local Whisper transcription.
 
+<table>
+  <tr>
+    <td><img src="assets/menu-bar.webp" width="400" alt="Menu bar popover"></td>
+    <td><img src="assets/settings-general.webp" width="400" alt="General settings"></td>
+  </tr>
+  <tr>
+    <td><img src="assets/settings-models.webp" width="400" alt="Model management"></td>
+    <td><img src="assets/settings-advanced.webp" width="400" alt="Advanced settings"></td>
+  </tr>
+</table>
+
 ## Setup
 
 ```bash
@@ -17,10 +28,10 @@ Requires macOS 14+ and Swift 5.9+ (Xcode Command Line Tools). First build takes 
 
 Downloaded on-demand from the app. Stored in `~/Library/Application Support/WhisperDictation/Models/`.
 
-| Model | Size | Speed | Accuracy |
-|-------|------|-------|----------|
-| Tiny | 75 MB | Fastest | Basic |
-| Base | 142 MB | Fast | Good |
-| Small | 466 MB | Medium | Better |
-| Medium | 1.5 GB | Slow | Great |
-| Large V2 | 3.1 GB | Slowest | Best |
+| Model    | Size   | Speed   | Accuracy |
+| -------- | ------ | ------- | -------- |
+| Tiny     | 75 MB  | Fastest | Basic    |
+| Base     | 142 MB | Fast    | Good     |
+| Small    | 466 MB | Medium  | Better   |
+| Medium   | 1.5 GB | Slow    | Great    |
+| Large V2 | 3.1 GB | Slowest | Best     |
