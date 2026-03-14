@@ -147,18 +147,17 @@ private struct ModelRow: View {
                 if !isSelected {
                     Button("Activate") { onSelect() }
                         .controlSize(.small)
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.hoverBordered)
                 }
                 Button { onDelete() } label: {
                     Image(systemName: "trash")
                         .font(.caption)
                 }
-                .buttonStyle(.borderless)
-                .foregroundStyle(.secondary)
+                .buttonStyle(.hoverDestructive)
             } else {
                 Button("Download") { onDownload() }
                     .controlSize(.small)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.hoverProminent)
             }
         }
         .padding(.horizontal, 16)

@@ -23,9 +23,9 @@ struct QuickTooltip: View {
             }
             .popover(isPresented: $isShowing, arrowEdge: .bottom) {
                 Text(text)
-                    .font(.caption)
-                    .padding(8)
-                    .frame(maxWidth: 220)
+                    .font(.callout)
+                    .padding(10)
+                    .frame(maxWidth: 260)
                     .fixedSize(horizontal: false, vertical: true)
             }
     }

@@ -42,7 +42,7 @@ struct HotkeyRecorderView: View {
                     }
                 }
                 .controlSize(.small)
-                .buttonStyle(.bordered)
+                .buttonStyle(.hoverBordered)
             }
             .background(
                 isRecording ? KeyCaptureView { key, modifiers in

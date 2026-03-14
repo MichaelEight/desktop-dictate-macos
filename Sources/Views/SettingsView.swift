@@ -32,23 +32,9 @@ struct SettingsView: View {
     }
 
     private func tabButton(_ title: String, icon: String, tag: Int) -> some View {
-        Button {
+        HoverTabButton(title: title, icon: icon, isSelected: selectedTab == tag) {
             selectedTab = tag
-        } label: {
-            VStack(spacing: 3) {
-                Image(systemName: icon)
-                    .font(.system(size: 16))
-                Text(title)
-                    .font(.caption2)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 6)
-            .contentShape(Rectangle())
-            .background(selectedTab == tag ? Color.accentColor.opacity(0.15) : Color.clear)
-            .cornerRadius(6)
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(selectedTab == tag ? .primary : .secondary)
     }
 }
 
@@ -140,16 +126,19 @@ private struct GeneralTab: View {
                 get: { appState.launchAtLoginManager.isEnabled },
                 set: { appState.launchAtLoginManager.setEnabled($0) }
             ))
+            .toggleStyle(HoverToggleStyle())
 
             Toggle("Sound feedback", isOn: Binding(
                 get: { appState.settingsManager.soundFeedback },
                 set: { appState.settingsManager.soundFeedback = $0 }
             ))
+            .toggleStyle(HoverToggleStyle())
 
             Toggle("Keep transcription in clipboard", isOn: Binding(
                 get: { appState.settingsManager.keepInClipboard },
                 set: { appState.settingsManager.keepInClipboard = $0 }
             ))
+            .toggleStyle(HoverToggleStyle())
 
             HStack(spacing: 4) {
                 Toggle("Streaming mode", isOn: Binding(
@@ -158,6 +147,7 @@ private struct GeneralTab: View {
                 ))
                 QuickTooltip(text: "Shows live transcription while you speak. Re-transcribes all audio every few seconds. Accurate but slower.")
             }
+            .toggleStyle(HoverToggleStyle())
 
             HStack(spacing: 4) {
                 Toggle("Streaming mode (experimental)", isOn: Binding(
@@ -166,6 +156,7 @@ private struct GeneralTab: View {
                 ))
                 QuickTooltip(text: "Near-live transcription using a sliding audio window. Text appears ~1-2s after speaking. Uses more CPU.")
             }
+            .toggleStyle(HoverToggleStyle())
 
             Divider()
 

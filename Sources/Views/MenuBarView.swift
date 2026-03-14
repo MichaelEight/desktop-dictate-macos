@@ -3,6 +3,20 @@ import SwiftUI
 struct MenuBarView: View {
     let appState: AppState
 
+    private var streamingSelection: Binding<Int> {
+        Binding(
+            get: {
+                if appState.settingsManager.fastStreamingMode { return 2 }
+                if appState.settingsManager.streamingMode { return 1 }
+                return 0
+            },
+            set: { value in
+                appState.settingsManager.streamingMode = (value == 1)
+                appState.settingsManager.fastStreamingMode = (value == 2)
+            }
+        )
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             // Status header with model quick-switcher
@@ -10,9 +24,9 @@ struct MenuBarView: View {
                 statusIcon
                 VStack(alignment: .leading, spacing: 2) {
                     Text(statusTitle)
-                        .font(.headline)
+                        .font(.body.weight(.semibold))
                     Text(appState.statusMessage)
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -21,16 +35,6 @@ struct MenuBarView: View {
 
             if case .recording = appState.recordingState {
                 RecordingIndicatorView()
-
-                // Show live streaming transcription
-                if appState.settingsManager.streamingMode && !appState.streamingTranscription.isEmpty {
-                    Text(appState.streamingTranscription)
-                        .font(.system(.caption, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(3)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .italic()
-                }
             }
 
             // Last transcription with copy button
@@ -38,7 +42,7 @@ struct MenuBarView: View {
                 Divider()
                 HStack(alignment: .top, spacing: 6) {
                     Text(appState.lastTranscription)
-                        .font(.system(.body, design: .rounded))
+                        .font(.callout)
                         .lineLimit(5)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -48,9 +52,9 @@ struct MenuBarView: View {
                         NSPasteboard.general.setString(appState.lastTranscription, forType: .string)
                     } label: {
                         Image(systemName: "doc.on.doc")
-                            .font(.caption)
+                            .font(.callout)
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.hover)
                 }
             }
 
@@ -62,18 +66,32 @@ struct MenuBarView: View {
 
             Divider()
 
+            // Streaming mode picker
+            HStack(spacing: 8) {
+                Text("Streaming:")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                HoverSegmentedPicker(
+                    selection: streamingSelection,
+                    options: ["No", "Normal", "Fast (EXP)"]
+                )
+            }
+
+            Divider()
+
             // Footer
             HStack(spacing: 12) {
                 Button("Settings") {
                     WindowManager.shared.openSettings(appState: appState)
                 }
-                .buttonStyle(.borderless)
+                .font(.callout)
+                .buttonStyle(.hover)
 
                 Spacer()
 
                 // Hotkey badge
                 Text(appState.hotKeyManager.currentHotkeyDescription)
-                    .font(.system(.caption2, design: .rounded))
+                    .font(.system(.callout, design: .rounded))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(.quaternary)
@@ -85,8 +103,8 @@ struct MenuBarView: View {
                 Button("Quit") {
                     NSApplication.shared.terminate(nil)
                 }
-                .buttonStyle(.borderless)
-                .foregroundStyle(.secondary)
+                .font(.callout)
+                .buttonStyle(.hoverDestructive)
             }
         }
         .padding()
@@ -125,9 +143,9 @@ struct MenuBarView: View {
                     .fill(appState.modelLoaded ? .green : .orange)
                     .frame(width: 6, height: 6)
                 Text(appState.settingsManager.selectedModel?.id.capitalized ?? "None")
-                    .font(.caption2.weight(.medium))
+                    .font(.callout.weight(.medium))
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.system(size: 9, weight: .bold))
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -155,25 +173,7 @@ struct MenuBarView: View {
     }
 
     private func permissionRow(_ text: String, icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .foregroundStyle(.orange)
-                Text(text)
-                    .font(.caption.weight(.medium))
-                Spacer()
-                Text("Fix")
-                    .font(.caption.weight(.bold))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(.orange.opacity(0.2))
-                    .cornerRadius(4)
-            }
-            .padding(8)
-            .background(.orange.opacity(0.08))
-            .cornerRadius(8)
-        }
-        .buttonStyle(.plain)
+        PermissionRowButton(text: text, icon: icon, action: action)
     }
 
     // MARK: - Status
@@ -210,5 +210,38 @@ struct MenuBarView: View {
         case .error(let msg):
             return "Error: \(msg)"
         }
+    }
+}
+
+private struct PermissionRowButton: View {
+    let text: String
+    let icon: String
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .foregroundStyle(.orange)
+                    .font(.callout)
+                Text(text)
+                    .font(.callout.weight(.medium))
+                Spacer()
+                Text("Fix")
+                    .font(.callout.weight(.bold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(.orange.opacity(isHovered ? 0.4 : 0.2))
+                    .cornerRadius(4)
+            }
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(.orange.opacity(isHovered ? 0.15 : 0.08))
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
     }
 }
